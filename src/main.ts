@@ -38,6 +38,18 @@ export default class ImageToolsPlugin extends Plugin {
       name: "Download and process images",
       callback: () => this.processFile(),
     });
+
+    this.addCommand({
+      id: "convert-markdown-to-obsidian",
+      name: "Convert Markdown image links to Obsidian format",
+      callback: () => this.convertMarkdownToObsidian()
+    });
+
+    this.addCommand({
+      id: "convert-obsidian-to-markdown",
+      name: "Converted Obsidian image links to Markdown.",
+      callback: () => this.convertObsidianToMarkdown(),
+    });
   }
 
   onunload() {
@@ -59,6 +71,14 @@ export default class ImageToolsPlugin extends Plugin {
       return;
     }
     new Notice(`Processing file: ${this.activeFile.name}`);
+
+    const activeFile = this.app.workspace.getActiveFile();
+    if (activeFile) {
+      const metadata = this.app.metadataCache.getFileCache(activeFile);
+      const hasFrontmatter = !!metadata?.frontmatter;
+      // new Notice(hasFrontmatter ? "有 frontmatter" : "没有 frontmatter");
+      if (!hasFrontmatter) return;
+    }
 
     this.content = await this.app.vault.read(this.activeFile);
 
@@ -104,7 +124,7 @@ export default class ImageToolsPlugin extends Plugin {
         modal.open();
       } else {
         this.processFileWithReferer(this.activeFile, defaultReferer);
-      } 
+      }
     } else {
       // 如果没有 .webp 图片，使用普通下载方式
       console.debug("No .webp images found, using normal download");
@@ -219,12 +239,15 @@ export default class ImageToolsPlugin extends Plugin {
     try {
       // 获取当前文件名作为基础
       const curFileName = this.app.workspace.getActiveFile()?.name;
-      const curFileNameWithoutExt = curFileName
-        ? curFileName.split(".").slice(0, -1).join(".").replace(/\s+/g, "")
-        : "image";
+      const curFileNameWithoutExt = curFileName ? curFileName.split(".").slice(0, -1).join(".") : "image";
+
+      // Remove spaces from filename
+      // const curFileNameWithoutExt = curFileName
+      //   ? curFileName.split(".").slice(0, -1).join(".").replace(/\s+/g, "")
+      //   : "image";
 
       // 生成随机字符串
-      const chars = "abcdefghijkmnpqrstuvwxyz23456789".split("");
+      const chars = "abcdefghijklmnopqrstuvwxyz123456789".split("");
       const randomStr = Array(5)
         .fill(0)
         .map(() => chars[Math.floor(Math.random() * chars.length)])
@@ -244,11 +267,14 @@ export default class ImageToolsPlugin extends Plugin {
 
       // 如果有选中的文本，使用它作为图片描述
       const selectedText = editor.getSelection();
-      const markdownLink = selectedText
-        ? `![${selectedText}](${filePath})`
-        : `![](${filePath})`;
+      // const markdownLink = selectedText
+      //   ? `![${selectedText}](${filePath})`
+      //   : `![](${filePath})`;
+      // const encodedMarkdownLink = markdownLink.replace(/ /g, '%20');
 
-      editor.replaceSelection(markdownLink);
+      const wikiLink = selectedText ? `![[${filePath}|${selectedText}]]` : `![[${filePath}]]`
+
+      editor.replaceSelection(wikiLink);
 
       new Notice(`Image processed and saved as ${fileName}`);
     } catch (error) {
@@ -257,21 +283,81 @@ export default class ImageToolsPlugin extends Plugin {
     }
   }
 
-  private convertObsidianToMarkdown(content: string): string {
-    return content.replace(/!\[\[(.*?)\]\]/g, '![]($1)');
+  // 应该只转换图片后缀的 转换时应该考虑空格 空格编码为%20
+  // private convertObsidianToMarkdown(content: string): string {
+  //   return content.replace(/!\[\[(.*?)\]\]/g, '![]($1)');
+  // }
+
+  private async convertObsidianToMarkdown() {
+    const activeFile = this.app.workspace.getActiveFile();
+    if (!activeFile) {
+      new Notice("No active file.");
+      return this.content;
+    }
+
+    const content = await this.app.vault.read(activeFile);
+    const replaced = content.replace(
+      /!\[\[(.+?\.(?:png|jpg|jpeg|gif|bmp|svg|webp))(?:\|([^\]]+))?\]\]/gi,
+      (_match, path, alt) => {
+        const encodedPath = path.replace(/ /g, '%20');
+        return alt ? `![${alt}](${encodedPath})` : `![](${encodedPath})`;
+      }
+    );
+
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (view?.editor.hasFocus()) {
+      view.editor.setValue(replaced);
+    } else if (activeFile) {
+      await this.app.vault.modify(activeFile, replaced);
+    }
+    new Notice("Converted Obsidian image links to Markdown.");
+  }
+
+
+  private async convertMarkdownToObsidian() {
+    const activeFile = this.app.workspace.getActiveFile();
+    if (!activeFile) {
+      new Notice("No active file.");
+      return this.content;
+    }
+
+    const content = await this.app.vault.read(activeFile);
+    const replaced = content.replace(
+      /!\[(.*?)\]\(([^)]+?\.(png|jpg|jpeg|gif|bmp|svg|webp))\)/gi,
+      (_match, alt, path) => {
+        const decodedPath = path.replace(/%20/g, ' ');
+        return alt ? `![[${decodedPath}|${alt}]]` : `![[${decodedPath}]]`;
+      }
+    );
+
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (view?.editor.hasFocus()) {
+      view.editor.setValue(replaced);
+    } else if (activeFile) {
+      await this.app.vault.modify(activeFile, replaced);
+    }
+    new Notice("Converted Markdown image links to Obsidian format.");
   }
 
   replaceImageUrls(content: string, downloadedPaths: Map<string, string>): string {
     // 先转换 Obsidian 格式
-    content = this.convertObsidianToMarkdown(content);
+    // content = this.convertObsidianToMarkdown(content);
 
     // 然后处理标准 Markdown 格式
+    // return content.replace(/!\[(.*?)\]\((http[^)]+)\)/g, (match, alt, url) => {
+    //   const downloadedPath = downloadedPaths.get(url);
+    //   if (!downloadedPath) return match;
+    //   return `![${alt}](${downloadedPath})`;
+    // });
+
     return content.replace(/!\[(.*?)\]\((http[^)]+)\)/g, (match, alt, url) => {
       const downloadedPath = downloadedPaths.get(url);
       if (!downloadedPath) return match;
-      return `![${alt}](${downloadedPath})`;
+      const wikiPath = alt ? `![[${downloadedPath}|${alt}]]` : `![[${downloadedPath}]]`
+      return wikiPath;
     });
   }
+
 
   extractImageUrls(content: string) {
     const regex = /!\[.*?\]\((http.*?)\)/g;

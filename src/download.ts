@@ -116,11 +116,14 @@ async function downloadWithReferer(app: App, url: string, referer: string): Prom
                     }
 
                     const curFileName = app.workspace.getActiveFile()?.name;
-                    const curFileNameWithoutExt = curFileName
-                      ? curFileName.split(".").slice(0, -1).join(".").replace(/\s+/g, "")
-                      : "image";
-                    
-                    const chars = "abcdefghijkmnpqrstuvwxyz23456789".split("");
+                    const curFileNameWithoutExt = curFileName ? curFileName.split(".").slice(0, -1).join(".") : "image";
+
+                    // Remove spaces from filename
+                    // const curFileNameWithoutExt = curFileName
+                    //   ? curFileName.split(".").slice(0, -1).join(".").replace(/\s+/g, "")
+                    //   : "image";
+
+                    const chars = "abcdefghijklmnopqrstuvwxyz123456789".split("");
                     const randomStr = Array(5)
                         .fill(0)
                         .map(() => chars[Math.floor(Math.random() * chars.length)])
