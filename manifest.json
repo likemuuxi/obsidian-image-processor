@@ -1,7 +1,7 @@
 {
 	"id": "image-tools",
 	"name": "Image Tools",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"minAppVersion": "0.15.0",
 	"description": "Obsidian Image Tools Plugin.",
 	"author": "Obsidian",
