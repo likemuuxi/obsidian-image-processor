@@ -1,9 +1,9 @@
 {
-	"id": "image-tools",
-	"name": "Image Tools",
-	"version": "0.1.1",
+	"id": "image-processor",
+	"name": "Image Processor",
+	"version": "0.1.2",
 	"minAppVersion": "0.15.0",
-	"description": "Obsidian Image Tools Plugin.",
+	"description": "Obsidian Image Processor Plugin.",
 	"author": "Obsidian",
 	"authorUrl": "https://obsidian.md",
 	"fundingUrl": "https://obsidian.md/pricing",

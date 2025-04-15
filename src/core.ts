@@ -1,7 +1,7 @@
 import fileUrl from "file-url";
 import assertNever from "assert-never";
 import { Editor, EditorPosition, EditorRange } from "obsidian";
-import { NothingSelected, ImageToolsSettings } from "./settings";
+import { NothingSelected, ImageProcessorSettings } from "./settings";
 
 // https://www.oreilly.com/library/view/regular-expressions-cookbook/9781449327453/ch08s18.html
 const win32Path = /^[a-z]:\\(?:[^\\/:*?"<>|\r\n]+\\)*[^\\/:*?"<>|\r\n]*$/i;
@@ -13,14 +13,14 @@ const testFilePath = (url: string) => win32Path.test(url) || unixPath.test(url);
  * @param cbString text on clipboard
  * @param settings plugin settings
  */
-export default function UrlIntoSelection(editor: Editor, cbString: string, settings: ImageToolsSettings): void;
+export default function UrlIntoSelection(editor: Editor, cbString: string, settings: ImageProcessorSettings): void;
 /**
  * @param editor Obsidian Editor Instance
  * @param cbEvent clipboard event
  * @param settings plugin settings
  */
-export default function UrlIntoSelection(editor: Editor, cbEvent: ClipboardEvent, settings: ImageToolsSettings): void;
-export default function UrlIntoSelection(editor: Editor, cb: string | ClipboardEvent, settings: ImageToolsSettings): void {
+export default function UrlIntoSelection(editor: Editor, cbEvent: ClipboardEvent, settings: ImageProcessorSettings): void;
+export default function UrlIntoSelection(editor: Editor, cb: string | ClipboardEvent, settings: ImageProcessorSettings): void {
   // skip all if nothing should be done
   if (!editor.somethingSelected() && settings.nothingSelected === NothingSelected.doNothing)
     return;
@@ -47,7 +47,7 @@ export default function UrlIntoSelection(editor: Editor, cb: string | ClipboardE
   }
 }
 
-function getSelnRange(editor: Editor, settings: ImageToolsSettings) {
+function getSelnRange(editor: Editor, settings: ImageProcessorSettings) {
   let selectedText: string;
   let replaceRange: EditorRange | null;
 
@@ -74,7 +74,7 @@ function getSelnRange(editor: Editor, settings: ImageToolsSettings) {
   return { selectedText, replaceRange };
 }
 
-function isUrl(text: string, settings: ImageToolsSettings): boolean {
+function isUrl(text: string, settings: ImageProcessorSettings): boolean {
   if (text === "") return false;
   try {
     // throw TypeError: Invalid URL if not valid
@@ -86,7 +86,7 @@ function isUrl(text: string, settings: ImageToolsSettings): boolean {
   }
 }
 
-function isImgEmbed(text: string, settings: ImageToolsSettings): boolean {
+function isImgEmbed(text: string, settings: ImageProcessorSettings): boolean {
   const rules = settings.listForImgEmbed
     .split("\n")
     .filter((v) => v.length > 0)
@@ -107,7 +107,7 @@ function isImgEmbed(text: string, settings: ImageToolsSettings): boolean {
  * @param settings plugin settings
  * @returns a mardown link or image link if the clipboard or selction value is a valid link, else null.
  */
-function getReplaceText(clipboardText: string, selectedText: string, settings: ImageToolsSettings): string | null {
+function getReplaceText(clipboardText: string, selectedText: string, settings: ImageProcessorSettings): string | null {
 
   let linktext: string;
   let url: string;
@@ -162,7 +162,7 @@ function getCbText(cb: string | ClipboardEvent): string | null {
   return clipboardText.trim();
 }
 
-function getWordBoundaries(editor: Editor, settings: ImageToolsSettings): EditorRange {
+function getWordBoundaries(editor: Editor, settings: ImageProcessorSettings): EditorRange {
   const cursor = editor.getCursor();
   const line = editor.getLine(cursor.line);
   let wordBoundaries = findWordAt(line, cursor);;

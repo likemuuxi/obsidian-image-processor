@@ -1,7 +1,8 @@
 import { App, PluginSettingTab, Setting, DropdownComponent } from "obsidian";
-import ImageToolsPlugin from "./main";
+import ImageProcessorPlugin from "./main";
 
-export interface ImageToolsSettings {
+export interface ImageProcessorSettings {
+    style: 'obsidian' | 'markdown'
     format: 'JPEG' | 'PNG';
     quality: number;
     colorDepth: number;
@@ -22,7 +23,8 @@ export const enum NothingSelected {
     insertBare,
 }
 
-export const DEFAULT_SETTINGS: ImageToolsSettings = {
+export const DEFAULT_SETTINGS: ImageProcessorSettings = {
+    style: 'obsidian',
     format: 'JPEG',
     quality: 0.8,
     colorDepth: 1,
@@ -33,10 +35,10 @@ export const DEFAULT_SETTINGS: ImageToolsSettings = {
     listForImgEmbed: "",
 };
 
-export class ImageToolsSettingTab extends PluginSettingTab {
-    plugin: ImageToolsPlugin;
+export class ImageProcessorSettingTab extends PluginSettingTab {
+    plugin: ImageProcessorPlugin;
 
-    constructor(app: App, plugin: ImageToolsPlugin) {
+    constructor(app: App, plugin: ImageProcessorPlugin) {
         super(app, plugin);
         this.plugin = plugin;
     }
@@ -44,6 +46,21 @@ export class ImageToolsSettingTab extends PluginSettingTab {
     display(): void {
         const { containerEl } = this;
         containerEl.empty();
+
+        containerEl.createEl('h2', { text: 'Basic settings' });
+
+        new Setting(containerEl)
+            .setName('Image Link Style')
+            .setDesc('Select the processed image link format')
+            .addDropdown((dropdown: DropdownComponent) =>
+                dropdown
+                    .addOption('obsidian', 'Obsidian')
+                    .addOption('markdown', 'Markdown')
+                    .setValue(this.plugin.settings.style)
+                    .onChange(async (value: 'obsidian' | 'markdown') => {
+                        this.plugin.settings.style = value;
+                        await this.plugin.saveSettings();
+                    }));
 
         containerEl.createEl('h2', { text: 'Image Convert Settings' });
 

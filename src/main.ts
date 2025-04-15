@@ -3,11 +3,11 @@ import { RefererModal } from "./modal";
 import { DownloadImage } from "./download";
 import { ImageProcessor } from "./processor";
 import { Plugin, Notice, MarkdownView, TFile, Editor, normalizePath } from "obsidian";
-import { ImageToolsSettings, DEFAULT_SETTINGS, ImageToolsSettingTab } from "./settings";
+import { ImageProcessorSettings, DEFAULT_SETTINGS, ImageProcessorSettingTab } from "./settings";
 
 
-export default class ImageToolsPlugin extends Plugin {
-  settings: ImageToolsSettings;
+export default class ImageProcessorPlugin extends Plugin {
+  settings: ImageProcessorSettings;
   private activeFile: TFile | null = null;
   private content: string = '';
   private downloadDir: string = "";
@@ -28,7 +28,8 @@ export default class ImageToolsPlugin extends Plugin {
 
   async onload() {
     await this.loadSettings();
-    this.addSettingTab(new ImageToolsSettingTab(this.app, this));
+    this.addSettingTab(new ImageProcessorSettingTab(this.app, this));
+
     this.imageProcessor = new ImageProcessor();
 
     this.app.workspace.on("editor-paste", this.pasteHandler);
@@ -39,6 +40,12 @@ export default class ImageToolsPlugin extends Plugin {
       callback: () => this.processFile(),
     });
 
+    // this.addCommand({
+    //   id: "compress-current-file-images",
+    //   name: "Compress current file images",
+    //   callback: () => this.convertMarkdownToObsidian()
+    // });
+
     this.addCommand({
       id: "convert-markdown-to-obsidian",
       name: "Convert Markdown image links to Obsidian format",
@@ -47,7 +54,7 @@ export default class ImageToolsPlugin extends Plugin {
 
     this.addCommand({
       id: "convert-obsidian-to-markdown",
-      name: "Converted Obsidian image links to Markdown.",
+      name: "Converted Obsidian image links to Markdown",
       callback: () => this.convertObsidianToMarkdown(),
     });
   }
@@ -267,14 +274,18 @@ export default class ImageToolsPlugin extends Plugin {
 
       // 如果有选中的文本，使用它作为图片描述
       const selectedText = editor.getSelection();
-      // const markdownLink = selectedText
-      //   ? `![${selectedText}](${filePath})`
-      //   : `![](${filePath})`;
-      // const encodedMarkdownLink = markdownLink.replace(/ /g, '%20');
 
-      const wikiLink = selectedText ? `![[${filePath}|${selectedText}]]` : `![[${filePath}]]`
+      let pasteLink: string;
+      if(this.settings.style == 'obsidian') {
+        pasteLink = selectedText ? `![[${filePath}|${selectedText}]]` : `![[${filePath}]]`
+      } else {
+        const markdownLink = selectedText
+          ? `![${selectedText}](${filePath})`
+          : `![](${filePath})`;
+        pasteLink = markdownLink.replace(/ /g, '%20');
+      }
 
-      editor.replaceSelection(wikiLink);
+      editor.replaceSelection(pasteLink);
 
       new Notice(`Image processed and saved as ${fileName}`);
     } catch (error) {
@@ -283,10 +294,28 @@ export default class ImageToolsPlugin extends Plugin {
     }
   }
 
-  // 应该只转换图片后缀的 转换时应该考虑空格 空格编码为%20
-  // private convertObsidianToMarkdown(content: string): string {
-  //   return content.replace(/!\[\[(.*?)\]\]/g, '![]($1)');
-  // }
+  replaceImageUrls(content: string, downloadedPaths: Map<string, string>): string {
+    return content.replace(/!\[(.*?)\]\((http[^)]+)\)/g, (match, alt, url) => {
+      const downloadedPath = downloadedPaths.get(url);
+      if (!downloadedPath) return match;
+  
+      if (this.settings.style === 'obsidian') {
+        return alt ? `![[${downloadedPath}|${alt}]]` : `![[${downloadedPath}]]`;
+      } else {
+        return `![${alt}](${downloadedPath})`;
+      }
+    });
+  }
+
+  extractImageUrls(content: string) {
+    const regex = /!\[.*?\]\((http.*?)\)/g;
+    const urls: string[] = [];
+    let match;
+    while ((match = regex.exec(content)) !== null) {
+      urls.push(match[1]);
+    }
+    return urls;
+  }
 
   private async convertObsidianToMarkdown() {
     const activeFile = this.app.workspace.getActiveFile();
@@ -337,35 +366,5 @@ export default class ImageToolsPlugin extends Plugin {
       await this.app.vault.modify(activeFile, replaced);
     }
     new Notice("Converted Markdown image links to Obsidian format.");
-  }
-
-  replaceImageUrls(content: string, downloadedPaths: Map<string, string>): string {
-    // 先转换 Obsidian 格式
-    // content = this.convertObsidianToMarkdown(content);
-
-    // 然后处理标准 Markdown 格式
-    // return content.replace(/!\[(.*?)\]\((http[^)]+)\)/g, (match, alt, url) => {
-    //   const downloadedPath = downloadedPaths.get(url);
-    //   if (!downloadedPath) return match;
-    //   return `![${alt}](${downloadedPath})`;
-    // });
-
-    return content.replace(/!\[(.*?)\]\((http[^)]+)\)/g, (match, alt, url) => {
-      const downloadedPath = downloadedPaths.get(url);
-      if (!downloadedPath) return match;
-      const wikiPath = alt ? `![[${downloadedPath}|${alt}]]` : `![[${downloadedPath}]]`
-      return wikiPath;
-    });
-  }
-
-
-  extractImageUrls(content: string) {
-    const regex = /!\[.*?\]\((http.*?)\)/g;
-    const urls: string[] = [];
-    let match;
-    while ((match = regex.exec(content)) !== null) {
-      urls.push(match[1]);
-    }
-    return urls;
   }
 }
