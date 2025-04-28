@@ -77,7 +77,7 @@ export default class ImageProcessorPlugin extends Plugin {
       new Notice("You haven't opened a document!");
       return;
     }
-    new Notice(`Processing file: ${this.activeFile.name}`);
+    // new Notice(`Processing file: ${this.activeFile.name}`);
 
     const activeFile = this.app.workspace.getActiveFile();
     if (activeFile) {
@@ -147,7 +147,8 @@ export default class ImageProcessorPlugin extends Plugin {
       try {
         // 根据图片格式选择下载方式
         const isWebp = url.toLowerCase().endsWith('webp');
-        console.debug(`Processing URL: ${url}, isWebp: ${isWebp}`);
+        const isGif = url.toLowerCase().endsWith('gif');
+        console.debug(`Processing URL: ${url}, isWebp: ${isWebp}, isGif: ${isGif}`);
 
         let fileName: string | null;
 
@@ -169,6 +170,13 @@ export default class ImageProcessorPlugin extends Plugin {
           const file = this.app.vault.getAbstractFileByPath(filePath);
           if (!file || !(file instanceof TFile)) {
             new Notice(`File not found: ${filePath}`);
+            continue;
+          }
+
+          // 如果是 GIF，直接使用下载的文件
+          if (isGif) {
+            console.debug('GIF file detected, skipping processing');
+            downloadedPathsMap.set(url, normalizePath(filePath));
             continue;
           }
 
