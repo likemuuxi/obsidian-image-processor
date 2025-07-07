@@ -6,6 +6,9 @@ export interface ImageProcessorSettings {
     format: 'JPEG' | 'PNG';
     quality: number;
     colorDepth: number;
+    
+    // 文件重命名相关设置
+    fileRenameEnabled: boolean;
 
     regex: string;
     nothingSelected: NothingSelected;
@@ -28,6 +31,9 @@ export const DEFAULT_SETTINGS: ImageProcessorSettings = {
     format: 'JPEG',
     quality: 0.8,
     colorDepth: 1,
+    
+    // 文件重命名功能默认启用
+    fileRenameEnabled: true,
 
     regex: /[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/
         .source,
@@ -62,6 +68,17 @@ export class ImageProcessorSettingTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     }));
 
+        new Setting(containerEl)
+            .setName('Auto Rename Images')
+            .setDesc('Automatically rename all images in a file when the file is renamed. Images will be renamed to match the new filename format.')
+            .addToggle(toggle =>
+                toggle
+                    .setValue(this.plugin.settings.fileRenameEnabled)
+                    .onChange(async (value: boolean) => {
+                        this.plugin.settings.fileRenameEnabled = value;
+                        await this.plugin.saveSettings();
+                    }));
+
         containerEl.createEl('h2', { text: 'Image Convert Settings' });
 
         new Setting(containerEl)
@@ -88,7 +105,6 @@ export class ImageProcessorSettingTab extends PluginSettingTab {
                         this.plugin.settings.quality = value;
                         await this.plugin.saveSettings();
                     }));
-
 
         containerEl.createEl("h2", { text: "URL-into-selection Settings" });
 

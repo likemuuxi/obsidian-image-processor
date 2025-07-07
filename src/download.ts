@@ -38,8 +38,9 @@ async function downloadNormalImage(app: App, url: string): Promise<string> {
                 const fileName = await generateFileName(app, extension);
                 const buffer = await streamToBuffer(response);
 
-                if (buffer.length < 1024 && !contentType.includes('svg')) {
-                    reject(new Error("File too small to be an image"));
+                // 用更智能的方式验证图片文件
+                if (!isValidImageBuffer(buffer, contentType)) {
+                    reject(new Error("Invalid image file"));
                     return;
                 }
 
@@ -110,8 +111,9 @@ async function downloadWithReferer(app: App, url: string, referer: string): Prom
                     const buffer = Buffer.concat(data);
                     console.debug(`Image file size: ${buffer.length} bytes`);
 
-                    if (extension !== ".svg" && buffer.length < 1024) {
-                        reject(new Error("The image size is too small, it seems that downloaded content is not an image."));
+                    // 用更智能的方式验证图片文件
+                    if (!isValidImageBuffer(buffer, contentType)) {
+                        reject(new Error("Invalid image file"));
                         return;
                     }
 
@@ -202,4 +204,47 @@ async function generateFileName(app: App, extension: string): Promise<string> {
         .join("");
     
     return `${curFileNameWithoutExt}_${randomStr}${extension}`;
+}
+
+function isValidImageBuffer(buffer: Buffer, contentType: string): boolean {
+    if (buffer.length === 0) {
+        return false;
+    }
+
+    // SVG 文件可以很小，只需要检查是否为空
+    if (contentType.includes('svg')) {
+        return buffer.length > 0;
+    }
+
+    // 检查常见图片格式的文件头
+    const signatures: { [key: string]: number[] } = {
+        'image/jpeg': [0xFF, 0xD8, 0xFF],
+        'image/png': [0x89, 0x50, 0x4E, 0x47],
+        'image/gif': [0x47, 0x49, 0x46],
+        'image/webp': [0x52, 0x49, 0x46, 0x46],
+        'image/bmp': [0x42, 0x4D],
+        'image/tiff': [0x49, 0x49, 0x2A, 0x00], // TIFF little-endian
+        'image/x-icon': [0x00, 0x00, 0x01, 0x00],
+    };
+
+    // 对于未知类型，如果太小则可能有问题（但放宽限制到100字节）
+    if (!signatures[contentType] && buffer.length < 100) {
+        return false;
+    }
+
+    // 检查文件头签名
+    const signature = signatures[contentType];
+    if (signature) {
+        if (buffer.length < signature.length) {
+            return false;
+        }
+        
+        for (let i = 0; i < signature.length; i++) {
+            if (buffer[i] !== signature[i]) {
+                return false;
+            }
+        }
+    }
+
+    return true;
 }
