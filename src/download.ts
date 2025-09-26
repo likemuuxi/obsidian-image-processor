@@ -6,8 +6,8 @@ import * as fs from "fs";
 export async function DownloadImage(app: App, url: string, referer: string): Promise<string> {
     try {
         const result = referer
-            ? await downloadWithReferer(app, url, referer)
-            : await downloadNormalImage(app, url);
+            ? await downloadWithReferer(app, encodeURI(url), referer)
+            : await downloadNormalImage(app, encodeURI(url));
         
         if (!result) {
             throw new Error("Failed to download image");
@@ -109,7 +109,7 @@ async function downloadWithReferer(app: App, url: string, referer: string): Prom
             response.on("end", async () => {
                 try {
                     const buffer = Buffer.concat(data);
-                    console.debug(`Image file size: ${buffer.length} bytes`);
+                    // console.debug(`Image file size: ${buffer.length} bytes`);
 
                     // 用更智能的方式验证图片文件
                     if (!isValidImageBuffer(buffer, contentType)) {

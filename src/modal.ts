@@ -13,11 +13,14 @@ export class RefererModal extends Modal {
   onOpen() {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.createEl("label", {
+    
+    // 创建标题和输入框容器
+    const inputContainer = contentEl.createDiv();
+    inputContainer.createEl("label", {
       text: "Please input referer(URL):",
     });
-    contentEl.createEl("br");
-    const input = contentEl.createEl("input", {
+    inputContainer.createEl("br");
+    const input = inputContainer.createEl("input", {
       type: "text",
       attr: { id: "referer-input" },
       placeholder: "https://example.com/xxx/",
@@ -29,7 +32,23 @@ export class RefererModal extends Modal {
       input.value = this.defaultReferer;
     }
 
-    const confirmButton = contentEl.createEl("button", { text: "OK" });
+    // 创建按钮容器
+    const buttonContainer = contentEl.createDiv();
+    buttonContainer.style.display = "flex";
+    buttonContainer.style.justifyContent = "space-between";
+    buttonContainer.style.marginTop = "1em";
+
+    // 添加下载所有附件按钮
+    const downloadButton = buttonContainer.createEl("button", { 
+      text: "Obsidian attachment download",
+    });
+    downloadButton.addEventListener("click", async () => {
+      await (this.app as any).commands.executeCommandById("editor:download-attachments");
+      this.close();
+    });
+
+    // 确认按钮
+    const confirmButton = buttonContainer.createEl("button", { text: "OK" });
     confirmButton.addEventListener("click", () => {
       const referer = input.value;
       if (!referer) {

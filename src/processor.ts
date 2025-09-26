@@ -1,4 +1,3 @@
-import { Notice } from "obsidian";
 
 type ResizeMode = 'None' | 'Fit';
 type ImageFormat = 'JPEG' | 'PNG';
