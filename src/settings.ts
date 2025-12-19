@@ -26,6 +26,14 @@ export interface ImageProcessorSettings {
 
     // 替换原来的 customReferers
     refererMappings: RefererMapping[];
+
+    // 未引用图片清理相关设置
+    deleteOption: string;
+    logsModal: boolean;
+    excludedFolders: string;
+    ribbonIcon: boolean;
+    excludeSubfolders: boolean;
+    excludedExtensions: string;
 }
 
 export const enum NothingSelected {
@@ -67,6 +75,14 @@ export const DEFAULT_SETTINGS: ImageProcessorSettings = {
             referer: "https://juejin.cn/"
         }
     ],
+
+    // 未引用图片清理功能默认设置
+    deleteOption: '.trash',
+    logsModal: true,
+    excludedFolders: '',
+    ribbonIcon: false,
+    excludeSubfolders: false,
+    excludedExtensions: "md, canvas, base",
 };
 
 export class ImageProcessorSettingTab extends PluginSettingTab {
@@ -194,6 +210,83 @@ export class ImageProcessorSettingTab extends PluginSettingTab {
                 text.inputEl.rows = 6;
                 text.inputEl.cols = 25;
             });
+
+
+        // ---------- 未引用图片清理设置区块 ----------
+        containerEl.createEl('h2', { text: 'Clear Images Settings' });
+
+        new Setting(containerEl)
+            .setName('Ribbon Icon')
+            .setDesc('Turn on if you want Ribbon Icon for clearing the images.')
+            .addToggle((toggle) =>
+                toggle.setValue(this.plugin.settings.ribbonIcon).onChange((value) => {
+                    this.plugin.settings.ribbonIcon = value;
+                    this.plugin.saveSettings();
+                    this.plugin.refreshIconRibbon();
+                })
+            );
+
+        new Setting(containerEl)
+            .setName('Delete Logs')
+            .setDesc(
+                'Turn off if you dont want to view the delete logs Modal to pop up after deletion is completed. It wont appear if no image is deleted'
+            )
+            .addToggle((toggle) =>
+                toggle.setValue(this.plugin.settings.logsModal).onChange((value) => {
+                    this.plugin.settings.logsModal = value;
+                    this.plugin.saveSettings();
+                })
+            );
+
+        new Setting(containerEl)
+            .setName('Deleted Image Destination')
+            .setDesc('Select where you want images to be moved once they are deleted')
+            .addDropdown((dropdown) => {
+                dropdown.addOption('permanent', 'Delete Permanently');
+                dropdown.addOption('.trash', 'Move to Obsidian Trash');
+                dropdown.addOption('system-trash', 'Move to System Trash');
+                dropdown.setValue(this.plugin.settings.deleteOption);
+                dropdown.onChange((option) => {
+                    this.plugin.settings.deleteOption = option;
+                    this.plugin.saveSettings();
+                });
+            });
+
+        new Setting(containerEl)
+            .setName('Excluded Folder Full Paths')
+            .setDesc(
+                `Provide the FULL path of the folder names (Case Sensitive) divided by comma (,) to be excluded from clearing. 
+					i.e. For images under Personal/Files/Zodiac -> Personal/Files/Zodiac should be used for exclusion`
+            )
+            .addTextArea((text) =>
+                text.setValue(this.plugin.settings.excludedFolders).onChange((value) => {
+                    this.plugin.settings.excludedFolders = value;
+                    this.plugin.saveSettings();
+                })
+            );
+
+        new Setting(containerEl)
+            .setName('Exclude Subfolders')
+            .setDesc('Turn on this option if you want to also exclude all subfolders of the folder paths provided above.')
+            .addToggle((toggle) =>
+                toggle.setValue(this.plugin.settings.excludeSubfolders).onChange((value) => {
+                    this.plugin.settings.excludeSubfolders = value;
+                    this.plugin.saveSettings();
+                })
+            );
+
+        new Setting(containerEl)
+            .setName('Excluded Extensions')
+            .setDesc(
+                `Provide the extensions of the files to be excluded from clearing. 
+					i.e. md, canvas, base`
+            )
+            .addText((text) =>
+                text.setPlaceholder('md, canvas, base').setValue(this.plugin.settings.excludedExtensions).onChange((value) => {
+                    this.plugin.settings.excludedExtensions = value;
+                    this.plugin.saveSettings();
+                })
+            );
 
         
         containerEl.createEl("h2", { text: "Download settings" });

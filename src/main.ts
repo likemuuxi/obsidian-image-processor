@@ -1,7 +1,8 @@
 import UrlIntoSelection from "./core";
-import { RefererModal } from "./modal";
+import { RefererModal, LogsModal } from "./modal";
 import { DownloadImage } from "./download";
 import { ImageProcessor } from "./processor";
+import * as Util from './util';
 import {
 	Plugin,
 	Notice,
@@ -27,6 +28,7 @@ interface HotlinkCheckResult {
 
 export default class ImageProcessorPlugin extends Plugin {
 	settings: ImageProcessorSettings;
+	ribbonIconEl: HTMLElement | undefined = undefined;
 	private activeFile: TFile | null = null;
 	private content: string = "";
 	private downloadDir: string = "";
@@ -108,6 +110,20 @@ export default class ImageProcessorPlugin extends Plugin {
 			name: "Converted Obsidian image links to Markdown",
 			callback: () => this.convertObsidianToMarkdown(),
 		});
+
+		this.addCommand({
+            id: 'clear-images-obsidian',
+            name: 'Clear Unused Images',
+            callback: () => this.clearUnusedAttachments('image'),
+        });
+
+        this.addCommand({
+            id: 'clear-unused-attachments',
+            name: 'Clear Unused Attachments',
+            callback: () => this.clearUnusedAttachments('all'),
+        });
+		
+        this.refreshIconRibbon();
 	}
 
 	onunload() {
@@ -127,6 +143,62 @@ export default class ImageProcessorPlugin extends Plugin {
 	async saveSettings() {
 		await this.saveData(this.settings);
 	}
+
+	refreshIconRibbon = () => {
+        this.ribbonIconEl?.remove();
+        if (this.settings.ribbonIcon) {
+            this.ribbonIconEl = this.addRibbonIcon('image-file', 'Clear Unused Images', (event): void => {
+                this.clearUnusedAttachments('image');
+            });
+        }
+    };
+
+    // Compare Used Images with all images and return unused ones
+	clearUnusedAttachments = async (type: 'all' | 'image') => {
+		const unusedAttachments: TFile[] =
+			await Util.getUnusedAttachments(this.app, type, this);
+	
+		const len = unusedAttachments.length;
+	
+		if (len > 0) {
+			let logs = '';
+	
+			// start
+			logs +=
+				`<span style="color:#9ca3af">` +
+				`[+] ${Util.getFormattedDate()}: Clearing started.` +
+				`</span></br>`;
+	
+			Util.deleteFilesInTheList(unusedAttachments, this, this.app)
+				.then(({ deletedImages, textToView }) => {
+					// per-file colored logs
+					logs += textToView;
+	
+					// summary
+					logs +=
+						`<span style="color:#9ca3af">` +
+						`[+] ${deletedImages} ${type === 'image' ? 'image(s)' : 'attachment(s)'} in total deleted.` +
+						`</span></br>`;
+	
+					// end
+					logs +=
+						`<span style="color:#9ca3af">` +
+						`[+] ${Util.getFormattedDate()}: Clearing completed.` +
+						`</span>`;
+	
+					if (this.settings.logsModal) {
+						const modal = new LogsModal(logs, this.app);
+						modal.open();
+					}
+				});
+	
+		} else {
+			new Notice(
+				`All ${type === 'image' ? 'images' : 'attachments'} are used. Nothing was deleted.`
+			);
+		}
+	};
+	
 
 	async processFile() {
 		this.activeFile = this.app.workspace.getActiveFile();

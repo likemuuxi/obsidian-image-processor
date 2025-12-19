@@ -6,3 +6,13 @@ available in the app when your plugin is enabled.
 If your plugin does not need CSS, delete this file.
 
 */
+.unused-images-logs {
+    margin-bottom: 13px;
+    margin-top: 5px;
+}
+
+.unused-images-center-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
